@@ -3,6 +3,8 @@
 
 This document is written so that anyone — technical or non-technical — can understand what happens at every step. Each diagram is followed by a description in everyday language.
 
+> **Technology note:** The backend "brain" described throughout this document is built using **Spring Boot** (Java). This is mentioned here once for completeness — the rest of this document deliberately avoids further technical jargon so it stays readable for non-technical stakeholders, mentors, and reviewers.
+
 ---
 
 ## Table of Contents
@@ -85,7 +87,7 @@ flowchart TB
 
 **The Website/App** — This is what every person sees on their screen. The visitor sees a registration form. The receptionist sees a check-in screen. The admin sees a dashboard. It's all the same system, but each role sees a different "view" based on who they are.
 
-**The Backend Server (the "brain")** — This is the part nobody sees. It's the decision-maker. When a visitor submits a form, the brain decides: is this person verified? Are they on the blacklist? Should I notify the host employee? It runs all the rules.
+**The Backend Server (the "brain")** — This is the part nobody sees. It's the decision-maker, built using a technology called **Spring Boot** (a Java-based framework). When a visitor submits a form, the brain decides: is this person verified? Are they on the blacklist? Should I notify the host employee? It runs all the rules. Spring Boot organizes this "brain" into clear departments internally — one part only handles security checks, another only handles sending messages, another only handles talking to the database — so the system stays organized even as more features get added.
 
 **The Database** — This is the permanent filing cabinet. Every visitor's name, every visit record, every approval, every check-in time — all of it lives here forever (or until the retention period expires).
 
@@ -485,6 +487,8 @@ With this feature, the dashboard is more like a live sports scoreboard — the m
 
 **The "always connected" idea:** Think of it like a live video call that stays open in the background. As long as that "call" is connected, any update gets pushed through instantly. If the connection drops for a moment (bad WiFi, etc.), the system notices, shows a small "paused" message, tries to reconnect automatically, and once reconnected, catches the dashboard back up to the current numbers.
 
+*(For the technically curious: Spring Boot implements this "always-on call" using a technology called WebSocket with a messaging protocol called STOMP — but you never need to know this to understand how the feature behaves.)*
+
 ---
 
 ## 11. Flow H — Daily Report Email (runs automatically)
@@ -624,5 +628,5 @@ If someone asks "how does this whole thing work?", here's the elevator pitch:
 
 ---
 
-*VMS Architecture & Workflow Guide | v1.0 | June 12, 2025*
-*Companion document to VMS-PRD-003 and VMS-SRS-003*
+*VMS Architecture & Workflow Guide | v2.0 | June 16, 2025*
+*Companion document to VMS-PRD-004 and VMS-SRS-004. Backend: Spring Boot 3.2 / Java 17.*

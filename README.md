@@ -2,7 +2,7 @@
 
 > A smart, secure, push-based digital security and visitor lifecycle platform. VMS replaces outdated paper logs with verified phone identity, instant WhatsApp approvals, cryptographically signed unforgeable QR passes, and real-time dashboard monitoring.
 
-Developed as the culmination of a 20-day software engineering internship, **VMS v3.0** represents the final, complete product specification and architecture, integrating robust security mechanisms, failover protocols, and premium design patterns.
+Developed as the culmination of a 20-day software engineering internship, **VMS** represents the final, complete product specification and architecture, integrating robust security mechanisms, failover protocols, and premium design patterns using **Java Spring Boot** as the backend framework.
 
 ---
 
@@ -11,7 +11,7 @@ Developed as the culmination of a 20-day software engineering internship, **VMS 
 All primary documentation resides in the [doc/](doc) directory:
 
 1. **[Product Requirements Document (PRD) v3.0](doc/VMS_PRD_v3.md)**: Product goals, detailed feature descriptions, role permissions, notification templates, and user stories.
-2. **[Software Requirements Specification (SRS) v3.0](doc/VMS_SRS_v3.md)**: Detailed technical specifications, database schema definitions (13 tables), API reference, pagination standards, file storage rules, and test cases.
+2. **[Software Requirements Specification (SRS) v3.0](doc/VMS_SRS_v3.md)**: Detailed technical specifications, database schema definitions, API reference, pagination standards, file storage rules, and test cases.
 3. **[Architecture & Complete Workflow Guide](doc/VMS_Architecture_Workflow.md)**: Sequential UML/Mermaid flows detailing pre-registration, walk-ins, OTP validation, blacklist checks, webhook validations, and failure mitigations.
 
 
@@ -26,14 +26,14 @@ flowchart TB
     subgraph Presentation["Presentation Layer"]
         BROWSER["🌐 Browser Client<br/>(HTML5 / Bootstrap 5 / Vanilla JS)"]
     end
-    subgraph App["Application Layer (Flask / Spring Boot)"]
+    subgraph App["Application Layer (Spring Boot)"]
         AUTH["🔑 Auth Service"]
         VISITOR["👤 Visitor & Visit Service"]
         BLACKLIST["🛡️ Blacklist Engine"]
         APPROVAL["💬 Approval Webhook Service"]
         QR["🔍 QR Code Generator & Validator"]
-        WS["📡 WebSocket Server (Socket.IO / STOMP)"]
-        SCHED["⏰ Scheduler (APScheduler / @Scheduled)"]
+        WS["📡 WebSocket Server (Spring WebSocket/STOMP)"]
+        SCHED["⏰ Scheduler (@Scheduled)"]
     end
     subgraph Data["Data Layer"]
         MYSQL["🗄️ MySQL 8.0<br/>(Permanent Relational Storage)"]
@@ -55,8 +55,8 @@ flowchart TB
 ```
 
 ### 🛠️ Technology Stack Breakdown
-* **Frontend:** Responsive HTML5, Bootstrap 5, Vanilla JavaScript, and Socket.IO client.
-* **Backend:** Python Flask (with Flask-SocketIO) OR Java Spring Boot (with Spring WebSocket STOMP).
+* **Frontend:** Responsive HTML5, Bootstrap 5, Vanilla JavaScript, and SockJS/STOMP client.
+* **Backend:** Java Spring Boot (with Spring WebSocket STOMP).
 * **Database:** MySQL 8.0 (ACID compliance, relational integrity, customized indexes).
 * **Cache:** Redis 7.0 (ephemeral data, hot-path lookup, form draft persistence with TTL).
 * **Services:** Twilio Verify (OTP SMS), Twilio WhatsApp Business API (Approvals), SendGrid (Transactional emails & Daily reports).
@@ -69,7 +69,7 @@ flowchart TB
 Every visitor belongs to a category which determines their verification requirements, routing destination, badge styling, and max duration.
 
 | Category | Description | OTP | Approval | Badge Color | Routing & Escalation | Max Duration |
-| :--- | :--- | :---: | :---: | :---: | :--- | :---: |
+| :--- | :--- | :---: | :---: | :---: | :--- | :--- |
 | **Client / Business** | Corporate partners, customers | Yes | Host Employee | **Blue** (#1B3F6E) | Main reception $\rightarrow$ escorted by host | 8 Hours |
 | **Interview Candidate**| Job applicants | Yes | HR Employee | **Green** (#1E6641) | Main reception $\rightarrow$ HR waiting area | 4 Hours |
 | **Vendor / Supplier** | Contract service providers | Yes | Operations / Proc | **Amber** (#B45309) | Goods entry / delivery bay | 4 Hours |
@@ -132,16 +132,17 @@ VMS uses digital signatures to prevent pass forgery or modification:
 
 ## 🗄️ Database Schema Summary
 
-The system database requires 13 structured tables containing customized indexes for performant lookups:
+The system database requires structured tables containing customized indexes for performant lookups:
 
 | Table | Purpose | Core Fields |
 | :--- | :--- | :--- |
 | **`Users`** | System actors & credentials | `UserID`, `Email`, `PasswordHash` (bcrypt), `Role`, `FailedLoginCount` |
-| **`Employees`** | Host information | `EmployeeID` (FK Users), `Department`, `Designation`, `Mobile` (WhatsApp) |
+| **`Departments`** | Department definitions | `DepartmentID` (PK), `DepartmentName` |
+| **`Employees`** | Host information | `EmployeeID` (FK Users), `DepartmentID` (FK Departments), `Designation`, `Contact` (WhatsApp) |
 | **`InviteTokens`** | pre-registration links | `Token` (UUID), `EmployeeID`, `ExpiresAt`, `UsedAt` |
 | **`VisitorCategories`** | Category configurations | `CategoryCode` (PK), `DisplayName`, `RequiresApproval`, `BadgeColour` |
-| **`Visitors`** | Master visitor directory | `VisitorID`, `Name`, `Mobile` (Indexed), `IDNumber` (Indexed), `PhotoPath` |
-| **`Visits`** | Visit records | `VisitID`, `VisitorID`, `EmployeeID`, `CategoryCode`, `ExpectedDate`, `Status` |
+| **`Visitors`** | Master visitor directory | `VisitorID`, `Name`, `Contact` (Indexed), `IDNumber` (Indexed), `PhotoPath` |
+| **`Visits`** | Visit records | `VisitID`, `VisitorID`, `EmployeeID`, `CategoryCode`, `VisitDate`, `Status` |
 | **`Approvals`** | Approval logs | `ApprovalID`, `VisitID`, `ApprovedBy`, `Channel` (WhatsApp/Email), `Remarks` |
 | **`CheckInOut`** | Check-in metrics | `CheckID`, `VisitID`, `CheckInTime`, `CheckOutTime`, `WalkinHostConfirmed` |
 | **`Blacklist`** | Blacklisted entities | `MobileNumber` (Indexed), `IDNumber` (Indexed), `Reason`, `IsActive` |
@@ -167,7 +168,7 @@ The system database requires 13 structured tables containing customized indexes 
 ## 🚀 Getting Started
 
 ### 📋 Prerequisites
-* Python 3.10+ OR Java 17+
+* Java 17+ and Maven 3.9+
 * MySQL 8.0+
 * Redis 7.0+
 * A Twilio account (with Verify Service and WhatsApp Sandbox enabled)
@@ -200,13 +201,13 @@ SENDGRID_API_KEY=SG.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 ### 🏃 Setup Commands
 1. Clone the repository and navigate to the project directory.
-2. Install the backend dependencies:
+2. Build the project using Maven:
    ```bash
-   pip install -r requirements.txt
+   mvn clean install
    ```
 3. Run the database migration scripts to initialize the tables and compile indexes.
 4. Start the Redis cache and MySQL server locally.
 5. Launch the application server:
    ```bash
-   python app.py
+   mvn spring-boot:run
    ```
