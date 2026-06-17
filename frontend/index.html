@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VMS | Secure Check-in</title>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="assets/css/style.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <style>
+        .login-page {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%);
+            display: flex;
+            align-items: center;
+        }
+        .hero-img {
+            max-width: 80%;
+            animation: slideUp 1s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="login-page">
+
+    <div class="container">
+        <div class="row align-items-center g-5">
+            
+            <!-- Left Side: Branding / Illustration -->
+            <div class="col-lg-6 d-none d-lg-block text-center">
+                <img src="https://illustrations.popsy.co/blue/surreal-hourglass.svg" alt="Security Illustration" class="hero-img img-fluid mb-4">
+                <h1 class="display-5 fw-bold text-dark mb-3">Welcome to VMS</h1>
+                <p class="lead text-muted">A smart, secure, and seamless digital visitor management platform for modern enterprises.</p>
+            </div>
+
+            <!-- Right Side: Login Form -->
+            <div class="col-lg-5 offset-lg-1">
+                <div class="glass-panel p-5 animate-slide-up">
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-circle mb-3" style="width: 60px; height: 60px; font-size: 24px;">
+                            <i class="bi bi-shield-lock-fill"></i>
+                        </div>
+                        <h3 class="fw-bold">Sign In to Dashboard</h3>
+                        <p class="text-muted small">Admin, Reception & Employee Login</p>
+                    </div>
+
+                    <form class="needs-validation" novalidate onsubmit="event.preventDefault(); window.location.href='dashboard.html';">
+                        <div class="mb-4">
+                            <label for="email" class="form-label-premium">Email Address</label>
+                            <input type="email" class="form-control form-control-premium" id="email" placeholder="name@company.com" required>
+                            <div class="invalid-feedback">Please enter a valid email.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="password" class="form-label-premium">Password</label>
+                            <input type="password" class="form-control form-control-premium" id="password" placeholder="••••••••" required>
+                            <div class="invalid-feedback">Password is required.</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="rememberMe">
+                                <label class="form-check-label text-muted small" for="rememberMe">Remember me</label>
+                            </div>
+                            <a href="#" class="text-decoration-none small text-primary fw-medium">Forgot password?</a>
+                        </div>
+
+                        <button type="submit" class="btn btn-premium w-100 mb-4 py-2 fs-5">Sign In</button>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <p class="text-muted small mb-2">Are you a visitor?</p>
+                        <a href="register.html" class="btn btn-outline-primary btn-sm rounded-pill px-4">Visitor Registration</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Bootstrap & Custom JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.css"></script>
+    <script src="assets/js/main.js"></script>
+</body>
+</html>
