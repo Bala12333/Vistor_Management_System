@@ -21,7 +21,7 @@
             <div class="col-lg-2 sidebar pt-4 px-3 d-none d-lg-block shadow-sm z-3">
                 <div class="d-flex align-items-center mb-5 px-3">
                     <i class="bi bi-shield-check fs-2 text-primary me-2"></i>
-                    <h4 class="fw-bold text-dark mb-0">VMS Admin</h4>
+                    <h4 id="sidebar-role-title" class="fw-bold text-dark mb-0">VMS Admin</h4>
                 </div>
                 
                 <div class="nav flex-column">
@@ -46,8 +46,8 @@
                 <!-- Topbar -->
                 <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom animate-slide-up">
                     <div>
-                        <h3 class="fw-bold text-dark mb-0">Live Dashboard</h3>
-                        <p class="text-muted small mb-0"><span class="badge bg-success align-middle me-1"></span> Live updates active</p>
+                        <h3 id="topbar-title" class="fw-bold text-dark mb-0">Live Dashboard</h3>
+                        <p id="topbar-subtitle" class="text-muted small mb-0"><span class="badge bg-success align-middle me-1"></span> Live updates active</p>
                     </div>
                     <div class="d-flex align-items-center">
                         <div class="input-group me-3 shadow-sm rounded-pill overflow-hidden">
@@ -56,11 +56,17 @@
                         </div>
                         <div class="dropdown">
                             <button class="btn btn-white shadow-sm rounded-circle p-2 border-0" data-bs-toggle="dropdown">
-                                <img src="https://ui-avatars.com/api/?name=Admin+User&background=4f46e5&color=fff" class="rounded-circle" width="40" height="40" alt="Profile">
+                                <img id="topbar-avatar" src="https://ui-avatars.com/api/?name=Admin+User&background=4f46e5&color=fff" class="rounded-circle" width="40" height="40" alt="Profile">
                             </button>
                         </div>
                     </div>
                 </div>
+
+                <!-- Main View Container -->
+                <div id="main-view-container">
+
+                    <!-- Dashboard View -->
+                    <div id="dashboard-view" class="view-section">
 
                 <!-- Stats Row -->
                 <div class="row g-4 mb-5 animate-slide-up" style="animation-delay: 0.1s;">
@@ -186,39 +192,152 @@
                         </div>
                     </div>
                 </div>
+                </div>
+                <!-- End Dashboard View -->
 
+                <!-- Visit History View -->
+                <div id="history-view" class="view-section d-none">
+                    <div class="card border-0 shadow-sm rounded-4 mb-4 animate-slide-up">
+                        <div class="card-header bg-white border-0 pt-4 pb-0 px-4">
+                            <h5 class="fw-bold mb-0">All Visits</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="text-muted small text-uppercase bg-light">
+                                        <tr>
+                                            <th class="rounded-start">Visitor</th>
+                                            <th>Mobile</th>
+                                            <th>Category</th>
+                                            <th>Host</th>
+                                            <th>Status</th>
+                                            <th class="rounded-end text-end">Expected Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="history-table-body">
+                                        <!-- Dynamically populated -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Approvals View -->
+                <div id="approvals-view" class="view-section d-none">
+                    <div class="card border-0 shadow-sm rounded-4 mb-4 animate-slide-up">
+                        <div class="card-header bg-white border-0 pt-4 pb-0 px-4">
+                            <h5 class="fw-bold mb-0">Pending Approvals</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="text-muted small text-uppercase bg-light">
+                                        <tr>
+                                            <th class="rounded-start">Visitor</th>
+                                            <th>Mobile</th>
+                                            <th>Category</th>
+                                            <th>Expected Date</th>
+                                            <th class="rounded-end text-end">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="approvals-table-body">
+                                        <!-- Dynamically populated -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Blacklist View -->
+                <div id="blacklist-view" class="view-section d-none">
+                    <div class="row g-4 animate-slide-up">
+                        <div class="col-lg-4">
+                            <div class="card border-0 shadow-sm rounded-4">
+                                <div class="card-header bg-white border-0 pt-4 px-4">
+                                    <h5 class="fw-bold mb-0">Add to Blacklist</h5>
+                                </div>
+                                <div class="card-body p-4">
+                                    <form id="blacklist-form">
+                                        <div class="mb-3">
+                                            <label class="form-label">Mobile Number</label>
+                                            <input type="text" class="form-control" id="blacklist-mobile" placeholder="+91...">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">ID Number (Optional)</label>
+                                            <input type="text" class="form-control" id="blacklist-id">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Reason</label>
+                                            <textarea class="form-control" id="blacklist-reason" rows="3" required></textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-danger w-100">Block Visitor</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-8">
+                            <div class="card border-0 shadow-sm rounded-4 h-100">
+                                <div class="card-header bg-white border-0 pt-4 px-4">
+                                    <h5 class="fw-bold mb-0">Blacklisted Individuals</h5>
+                                </div>
+                                <div class="card-body p-4">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle">
+                                            <thead class="text-muted small text-uppercase bg-light">
+                                                <tr>
+                                                    <th class="rounded-start">Mobile</th>
+                                                    <th>ID Number</th>
+                                                    <th>Reason</th>
+                                                    <th>Date Added</th>
+                                                    <th class="rounded-end text-end">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="blacklist-table-body">
+                                                <!-- Dynamically populated -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports View -->
+                <div id="reports-view" class="view-section d-none">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 mb-4 animate-slide-up">
+                        <div class="card-header bg-white border-0 pt-4 px-4">
+                            <h5 class="fw-bold mb-0">Analytics & Trends</h5>
+                        </div>
+                        <div class="card-body px-4 pb-4">
+                            <div style="height: 400px; width: 100%;">
+                                <canvas id="mainReportChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings View -->
+                <div id="settings-view" class="view-section d-none">
+                    <div class="card border-0 shadow-sm rounded-4 mb-4 animate-slide-up">
+                        <div class="card-header bg-white border-0 pt-4 px-4">
+                            <h5 class="fw-bold mb-0">System Settings</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <p class="text-muted">Configuration options will appear here.</p>
+                        </div>
+                    </div>
+                </div>
+
+                </div> <!-- End Main View Container -->
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Init Chart.js
-        const ctx = document.getElementById('visitorChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                datasets: [{
-                    label: 'Visitors',
-                    data: [120, 190, 150, 175, 130],
-                    backgroundColor: '#4f46e5',
-                    borderRadius: 6,
-                    barThickness: 20
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: { beginAtZero: true, grid: { borderDash: [2, 4] } },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
-    </script>
+
+    <script src="assets/js/main.js"></script>
 </body>
 </html>

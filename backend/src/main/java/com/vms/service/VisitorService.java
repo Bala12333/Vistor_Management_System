@@ -16,4 +16,12 @@ public interface VisitorService {
     void processCheckIn(Long visitId);
 
     void processCheckOut(Long visitId);
+
+    Page<Visit> getAllVisits(Pageable pageable);
+
+    Page<Visit> getPendingApprovals(Pageable pageable);
+
+    void approveVisit(Long visitId);
+
+    void rejectVisit(Long visitId);
 }

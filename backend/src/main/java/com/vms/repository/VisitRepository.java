@@ -24,6 +24,10 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
            countQuery = "SELECT count(v) FROM Visit v")
     Page<Visit> findAllWithDetails(Pageable pageable);
 
+    @Query(value = "SELECT v FROM Visit v JOIN FETCH v.visitor JOIN FETCH v.category WHERE v.status IN :statuses",
+           countQuery = "SELECT count(v) FROM Visit v WHERE v.status IN :statuses")
+    Page<Visit> findByStatusInWithDetails(List<VisitStatus> statuses, Pageable pageable);
+
     List<Visit> findByStatus(VisitStatus status);
 
     // To detect duplicate visits on the same day

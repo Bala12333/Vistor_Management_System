@@ -3,6 +3,7 @@ package com.vms.service.impl;
 import com.vms.entity.*;
 import com.vms.entity.enums.VisitStatus;
 import com.vms.repository.*;
+import com.vms.service.BlacklistService;
 import com.vms.service.VisitorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,10 +25,14 @@ public class VisitorServiceImpl implements VisitorService {
     private final VisitorCategoryRepository visitorCategoryRepository;
     private final CheckInOutRepository checkInOutRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final BlacklistService blacklistService;
 
     @Override
     @Transactional
     public Visitor registerVisitor(Visitor visitor) {
+        if (blacklistService.isBlacklisted(visitor.getMobile(), visitor.getIdNumber())) {
+            throw new RuntimeException("Visitor is blacklisted and cannot be registered.");
+        }
         return visitorRepository.findByMobile(visitor.getMobile())
                 .orElseGet(() -> visitorRepository.save(visitor));
     }
@@ -60,7 +66,47 @@ public class VisitorServiceImpl implements VisitorService {
     @Override
     @Transactional(readOnly = true)
     public Page<Visit> getActiveVisits(Pageable pageable) {
+        return visitRepository.findByStatusInWithDetails(
+            List.of(VisitStatus.APPROVED, VisitStatus.CHECKED_IN), pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Visit> getAllVisits(Pageable pageable) {
         return visitRepository.findAllWithDetails(pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Visit> getPendingApprovals(Pageable pageable) {
+        return visitRepository.findByStatusInWithDetails(
+            List.of(VisitStatus.PENDING), pageable);
+    }
+
+    @Override
+    @Transactional
+    public void approveVisit(Long visitId) {
+        Visit visit = visitRepository.findById(visitId)
+                .orElseThrow(() -> new RuntimeException("Visit not found"));
+        if (visit.getStatus() != VisitStatus.PENDING) {
+            throw new RuntimeException("Visit is not pending approval");
+        }
+        visit.setStatus(VisitStatus.APPROVED);
+        visitRepository.save(visit);
+        messagingTemplate.convertAndSend("/topic/visits", "STATUS_UPDATE");
+    }
+
+    @Override
+    @Transactional
+    public void rejectVisit(Long visitId) {
+        Visit visit = visitRepository.findById(visitId)
+                .orElseThrow(() -> new RuntimeException("Visit not found"));
+        if (visit.getStatus() != VisitStatus.PENDING) {
+            throw new RuntimeException("Visit is not pending approval");
+        }
+        visit.setStatus(VisitStatus.REJECTED);
+        visitRepository.save(visit);
+        messagingTemplate.convertAndSend("/topic/visits", "STATUS_UPDATE");
     }
 
     @Override

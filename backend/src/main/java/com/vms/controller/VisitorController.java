@@ -52,6 +52,36 @@ public class VisitorController {
         return ResponseEntity.ok(visits.map(this::mapToResponse));
     }
 
+    @GetMapping("/history")
+    @Operation(summary = "Get a paginated list of all visits (History)")
+    public ResponseEntity<Page<VisitResponse>> getVisitHistory(@RequestParam(defaultValue = "0") int page,
+                                                               @RequestParam(defaultValue = "10") int size) {
+        Page<Visit> visits = visitorService.getAllVisits(PageRequest.of(page, size));
+        return ResponseEntity.ok(visits.map(this::mapToResponse));
+    }
+
+    @GetMapping("/approvals/pending")
+    @Operation(summary = "Get a paginated list of visits pending approval")
+    public ResponseEntity<Page<VisitResponse>> getPendingApprovals(@RequestParam(defaultValue = "0") int page,
+                                                                   @RequestParam(defaultValue = "10") int size) {
+        Page<Visit> visits = visitorService.getPendingApprovals(PageRequest.of(page, size));
+        return ResponseEntity.ok(visits.map(this::mapToResponse));
+    }
+
+    @PostMapping("/{visitId}/approve")
+    @Operation(summary = "Approve a pending visit")
+    public ResponseEntity<Void> approveVisit(@PathVariable Long visitId) {
+        visitorService.approveVisit(visitId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{visitId}/reject")
+    @Operation(summary = "Reject a pending visit")
+    public ResponseEntity<Void> rejectVisit(@PathVariable Long visitId) {
+        visitorService.rejectVisit(visitId);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/{visitId}/checkin")
     @Operation(summary = "Check-in an approved visitor (Secured Endpoint)")
     public ResponseEntity<Void> checkIn(@PathVariable Long visitId) {
