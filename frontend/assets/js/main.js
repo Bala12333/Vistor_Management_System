@@ -5,7 +5,6 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     
-    // 1. Form Validation Initialization
     const forms = document.querySelectorAll('.needs-validation');
     Array.from(forms).forEach(form => {
         form.addEventListener('submit', event => {
@@ -17,12 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }, false);
     });
 
-    // 2. OTP Auto-Advance Logic
     const otpInputs = document.querySelectorAll('.otp-box');
     if (otpInputs.length > 0) {
         otpInputs.forEach((input, index) => {
             input.addEventListener('input', (e) => {
-                // Ensure only numbers are entered
                 e.target.value = e.target.value.replace(/[^0-9]/g, '');
                 
                 if (e.target.value.length === 1 && index < otpInputs.length - 1) {
@@ -36,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             
-            // Handle paste event for OTP
             input.addEventListener('paste', (e) => {
                 e.preventDefault();
                 const pastedData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').substring(0, 6);
@@ -53,7 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 3. Dynamic Field Toggling based on Visitor Category
     const categorySelect = document.getElementById('visitorCategory');
     const dynamicFieldsContainer = document.getElementById('dynamicFieldsContainer');
 
@@ -93,7 +88,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 4. File Upload Preview (ID & Photo)
     const handleFilePreview = (inputId, previewId) => {
         const fileInput = document.getElementById(inputId);
         const previewElement = document.getElementById(previewId);
@@ -121,15 +115,13 @@ document.addEventListener('DOMContentLoaded', () => {
     handleFilePreview('photoUpload', 'photoPreview');
     handleFilePreview('idUpload', 'idPreview');
 
-    // ==========================================
-    // API INTEGRATION LOGIC (Day 18)
-    // ==========================================
-    const API_BASE_URL = 'http://localhost:8080/api/v1';
+    // --- API Configuration ---
+    const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+        ? 'http://localhost:8080/api/v1' 
+        : 'https://YOUR_RENDER_APP_NAME.onrender.com/api/v1'; // <-- IMPORTANT: Replace with your actual Render URL before deploying frontend!
 
-    // Helper: Get JWT Token
     const getToken = () => localStorage.getItem('vms_jwt');
 
-    // 5. Login Form Handling
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
@@ -161,90 +153,206 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 6. Registration Flow & OTP Handling
     const registrationForm = document.getElementById('registrationForm');
-    const btnSendOtp = document.getElementById('btnSendOtp');
-    const otpSection = document.getElementById('otpSection');
-    const otpSuccessMsg = document.getElementById('otpSuccessMsg');
-    let isOtpVerified = false;
+    const btnSendMobileOtp = document.getElementById('btnSendMobileOtp');
+    const btnSendEmailOtp = document.getElementById('btnSendEmailOtp');
+    const mobileOtpSection = document.getElementById('mobileOtpSection');
+    const emailOtpSection = document.getElementById('emailOtpSection');
+    
+    const mobileVerifiedBadge = document.getElementById('mobileVerifiedBadge');
+    const emailVerifiedBadge = document.getElementById('emailVerifiedBadge');
+    
+    let isMobileVerified = false;
+    let isEmailVerified = false;
+    let confirmationResult = null; // Store Firebase auth result
 
-    if (btnSendOtp) {
-        btnSendOtp.addEventListener('click', async () => {
+    if (btnSendMobileOtp) {
+        btnSendMobileOtp.addEventListener('click', async () => {
             const mobileInput = document.getElementById('mobile');
             if (!mobileInput.checkValidity()) {
                 alert('Please enter a valid 10-digit mobile number.');
                 return;
             }
-
             const mobile = '+91' + mobileInput.value;
+            const apiUrl = `${API_BASE_URL}/security/otp/send-mobile?mobile=${encodeURIComponent(mobile)}`;
+            
             try {
-                const response = await fetch(`${API_BASE_URL}/security/otp/send?mobile=${encodeURIComponent(mobile)}`, {
-                    method: 'POST'
-                });
+                btnSendMobileOtp.innerText = 'Sending...';
+                const response = await fetch(apiUrl, { method: 'POST' });
 
                 if (response.ok) {
-                    btnSendOtp.innerText = 'Sent!';
-                    btnSendOtp.classList.replace('btn-primary', 'btn-success');
-                    otpSection.style.display = 'block';
+                    btnSendMobileOtp.innerText = 'Sent!';
+                    btnSendMobileOtp.classList.replace('btn-outline-primary', 'btn-success');
+                    mobileOtpSection.style.display = 'block';
+                    alert('SMS sent! (Note: use 123456 for testing)');
                 } else {
-                    alert('Failed to send OTP. Please try again.');
+                    try {
+                        const errorData = await response.json();
+                        alert(`Error: ${errorData.error || errorData.message || 'Failed to send SMS OTP.'}`);
+                    } catch (e) {
+                        alert('Error sending OTP, check backend.');
+                    }
+                    btnSendMobileOtp.innerText = 'Send SMS Code';
                 }
             } catch (error) {
-                console.error('OTP Send error:', error);
+                // console.error('OTP Send error:', error);
                 alert('Connection error.');
+                btnSendMobileOtp.innerText = 'Send SMS Code';
             }
         });
     }
 
-    if (otpInputs.length > 0) {
-        const lastBox = otpInputs[5];
+    const mobileOtpInputs = document.querySelectorAll('.mobile-otp');
+    if (mobileOtpInputs.length > 0) {
+        const lastBox = mobileOtpInputs[5];
         lastBox.addEventListener('input', async () => {
             if (lastBox.value.length === 1) {
-                // Collect full OTP
-                let otpCode = Array.from(otpInputs).map(input => input.value).join('');
-                const mobile = '+91' + document.getElementById('mobile').value;
-
+                let otpCode = Array.from(mobileOtpInputs).map(input => input.value).join('');
+                const mobileInput = document.getElementById('mobile');
+                const mobile = '+91' + mobileInput.value;
+                const apiUrl = `${API_BASE_URL}/security/otp/verify-mobile`;
+                
                 try {
-                    const response = await fetch(`${API_BASE_URL}/security/otp/verify`, {
+                    const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ mobile, otpCode })
+                        body: JSON.stringify({ mobile: mobile, otpCode: otpCode })
                     });
 
-                    if (response.ok) {
-                        const isValid = await response.json();
-                        if (isValid) {
-                            otpSuccessMsg.classList.remove('d-none');
-                            otpSuccessMsg.innerHTML = '<i class="bi bi-check-circle"></i> Mobile Verified';
-                            otpSuccessMsg.classList.add('text-success');
-                            otpSuccessMsg.classList.remove('text-danger');
-                            isOtpVerified = true;
-                        } else {
-                            otpSuccessMsg.classList.remove('d-none');
-                            otpSuccessMsg.innerHTML = '<i class="bi bi-x-circle"></i> Invalid OTP';
-                            otpSuccessMsg.classList.remove('text-success');
-                            otpSuccessMsg.classList.add('text-danger');
-                            isOtpVerified = false;
-                        }
+                    if (response.ok && await response.json()) {
+                        mobileVerifiedBadge.classList.remove('d-none');
+                        mobileOtpSection.style.display = 'none';
+                        isMobileVerified = true;
+                    } else {
+                        // console.log("OTP was wrong", response);
+                        alert('Invalid SMS Code. Please try again.');
+                        mobileOtpInputs.forEach(i => i.value = '');
+                        mobileOtpInputs[0].focus();
+                        isMobileVerified = false;
                     }
                 } catch (error) {
-                    console.error('OTP Verify error:', error);
+                    console.error(error);
+                }
+            }
+        });
+    }
+
+    if (btnSendEmailOtp) {
+        btnSendEmailOtp.addEventListener('click', async () => {
+            const emailInput = document.getElementById('email');
+            if (!emailInput || !emailInput.checkValidity() || emailInput.value.trim() === '') {
+                alert('Please enter a valid email address in the Personal Details section first.');
+                return;
+            }
+            
+            const apiUrl = `${API_BASE_URL}/security/otp/send-email?email=${encodeURIComponent(emailInput.value)}`;
+            try {
+                btnSendEmailOtp.innerText = 'Sending...';
+                const response = await fetch(apiUrl, { method: 'POST' });
+
+                if (response.ok) {
+                    btnSendEmailOtp.innerText = 'Sent!';
+                    btnSendEmailOtp.classList.replace('btn-outline-primary', 'btn-success');
+                    emailOtpSection.style.display = 'block';
+                } else {
+                    try {
+                        const errorData = await response.json();
+                        alert(`Error: ${errorData.error || errorData.message || 'Failed to send Email OTP.'}`);
+                    } catch (e) {
+                        alert('Failed to send Email OTP. Please check backend logs.');
+                    }
+                    btnSendEmailOtp.innerText = 'Send Email Code';
+                }
+            } catch (error) {
+                console.error('Email OTP Send error:', error);
+                alert('Connection error.');
+                btnSendEmailOtp.innerText = 'Send Email Code';
+            }
+        });
+    }
+
+    const emailOtpInputs = document.querySelectorAll('.email-otp');
+    if (emailOtpInputs.length > 0) {
+        const lastBox = emailOtpInputs[5];
+        lastBox.addEventListener('input', async () => {
+            if (lastBox.value.length === 1) {
+                let otpCode = Array.from(emailOtpInputs).map(input => input.value).join('');
+                const emailInput = document.getElementById('email');
+                const apiUrl = `${API_BASE_URL}/security/otp/verify-email`;
+                
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: emailInput.value, otpCode: otpCode })
+                    });
+
+                    if (response.ok && await response.json()) {
+                        emailVerifiedBadge.classList.remove('d-none');
+                        emailOtpSection.style.display = 'none';
+                        isEmailVerified = true;
+                    } else {
+                        alert('Invalid Email Code. Please try again.');
+                        emailOtpInputs.forEach(i => i.value = '');
+                        emailOtpInputs[0].focus();
+                        isEmailVerified = false;
+                    }
+                } catch (error) {
+                    console.error('Email OTP Verify error:', error);
                 }
             }
         });
     }
 
     if (registrationForm) {
+        fetch(`${API_BASE_URL}/draft`, { credentials: 'include' })
+            .then(res => {
+                if (res.status === 200) return res.json();
+                return null;
+            })
+            .then(draft => {
+                if (draft) {
+                    if (draft.name) document.getElementById('fullName').value = draft.name;
+                    if (draft.email) document.getElementById('email').value = draft.email;
+                    if (draft.mobile) {
+                        document.getElementById('mobile').value = draft.mobile.startsWith('+91') ? draft.mobile.substring(3) : draft.mobile;
+                    }
+                    if (draft.hostId) document.getElementById('hostEmployee').value = draft.hostId;
+                    if (draft.categoryCode) document.getElementById('visitorCategory').value = draft.categoryCode;
+                    if (draft.expectedDate) document.getElementById('expectedDate').value = draft.expectedDate;
+                    if (draft.purpose) document.getElementById('purpose').value = draft.purpose;
+                }
+            })
+            .catch(err => console.error('Failed to load draft:', err));
+
+        registrationForm.addEventListener('change', () => {
+            const payload = {
+                name: document.getElementById('fullName').value || null,
+                email: document.getElementById('email').value || null,
+                mobile: document.getElementById('mobile').value ? '+91' + document.getElementById('mobile').value : null,
+                hostId: document.getElementById('hostEmployee').value || null,
+                categoryCode: document.getElementById('visitorCategory').value || null,
+                expectedDate: document.getElementById('expectedDate').value || null,
+                purpose: document.getElementById('purpose').value || null
+            };
+            
+            fetch(`${API_BASE_URL}/draft`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            }).catch(err => console.error('Failed to save draft:', err));
+        });
+
         registrationForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!registrationForm.checkValidity()) return;
             
-            if (!isOtpVerified) {
-                alert('Please verify your mobile number with OTP first.');
+            if (!isMobileVerified || !isEmailVerified) {
+                alert('Please verify both your mobile number and email address before submitting.');
                 return;
             }
 
-            // Gather Registration Data
             const payload = {
                 name: document.getElementById('fullName').value,
                 email: document.getElementById('email').value,
@@ -266,8 +374,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (response.ok) {
                     const data = await response.json();
-                    alert(`Registration successful! Your Visit ID is ${data.id}. Please check your phone for the Pass.`);
-                    window.location.href = 'index.html'; // Redirect to home
+                    
+                    fetch(`${API_BASE_URL}/draft`, { method: 'DELETE', credentials: 'include' }).catch(() => {});
+                    
+                    // Hide the form and show the Digital Pass
+                    document.getElementById('registrationForm').parentElement.parentElement.style.display = 'none';
+                    const passContainer = document.getElementById('passContainer');
+                    if (passContainer) {
+                        passContainer.style.display = 'block';
+                        document.getElementById('passVisitId').innerText = `VMS-${data.id.toString().padStart(4, '0')}`;
+                        document.getElementById('passVisitorName').innerText = data.visitorName;
+                        document.getElementById('passHostName').innerText = data.hostName;
+                        // Generate a dynamic QR code containing the visit ID
+                        document.getElementById('passQrCode').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=VMS-VISIT-${data.id}`;
+                        // Show popup message
+                        alert("Registration successful! This pass has been sent to your email.");
+                    } else {
+                        alert(`Registration successful! Your Visit ID is ${data.id}. Please check your gmail for the Pass.`);
+                        window.location.href = 'index.html'; // Fallback
+                    }
                 } else {
                     const error = await response.json();
                     alert(`Registration failed: ${JSON.stringify(error)}`);
@@ -279,7 +404,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 7. SPA Routing & Dashboard Live Data Handling
     const isDashboard = window.location.pathname.includes('dashboard.html');
     if (isDashboard) {
         const token = getToken();
@@ -332,6 +456,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
+
+            // Show scanner button only for RECEPTION
+            const btnScanPass = document.getElementById('btnScanPass');
+            if (btnScanPass && userRole === 'RECEPTION') {
+                btnScanPass.classList.remove('d-none');
+            }
         };
         applyRoleBasedUI();
 
@@ -352,7 +482,6 @@ document.addEventListener('DOMContentLoaded', () => {
             navLinks.forEach(link => link.classList.remove('active'));
         };
 
-        // Handle Sidebar Routing
         navLinks.forEach(link => {
             link.addEventListener('click', (e) => {
                 const text = link.innerText.trim();
@@ -396,9 +525,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // -------------------------------------------------------------
-        // Dashboard - Active Visitors
-        // -------------------------------------------------------------
         const fetchActiveVisitors = async () => {
             try {
                 const response = await fetch(`${API_BASE_URL}/visitors/active`, {
@@ -415,7 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const renderVisitorsTable = (visitors) => {
-            // Find the table inside the dashboard view specifically
             const tbody = document.querySelector('#dashboard-view table tbody');
             if (!tbody) return;
             
@@ -508,9 +633,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        // -------------------------------------------------------------
-        // Visit History
-        // -------------------------------------------------------------
         const fetchHistory = async () => {
             try {
                 const response = await fetch(`${API_BASE_URL}/visitors/history?size=50`, {
@@ -557,9 +679,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.innerHTML = html;
         };
 
-        // -------------------------------------------------------------
-        // Approvals
-        // -------------------------------------------------------------
         const fetchApprovals = async () => {
             try {
                 const response = await fetch(`${API_BASE_URL}/visitors/approvals/pending`, {
@@ -617,9 +736,6 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchApprovals();
         };
 
-        // -------------------------------------------------------------
-        // Blacklist
-        // -------------------------------------------------------------
         const fetchBlacklist = async () => {
             try {
                 const response = await fetch(`${API_BASE_URL}/blacklist`, {
@@ -697,9 +813,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // -------------------------------------------------------------
-        // Reports
-        // -------------------------------------------------------------
         let reportChartInstance = null;
         let dashboardChartInstance = null;
         const fetchReports = async () => {
@@ -710,7 +823,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response.ok) {
                     const stats = await response.json();
                     
-                    // Reverse lists to show oldest to newest left to right
                     const labels = [...stats.labels].reverse();
                     const data = [...stats.data].reverse();
 
@@ -737,7 +849,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     };
 
-                    // Update Main Report Chart
                     const mainCtx = document.getElementById('mainReportChart');
                     if (mainCtx) {
                         if (reportChartInstance) {
@@ -746,7 +857,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         reportChartInstance = new Chart(mainCtx.getContext('2d'), chartConfig);
                     }
 
-                    // Update Dashboard Mini Chart
                     const dashCtx = document.getElementById('visitorChart');
                     if (dashCtx) {
                         if (dashboardChartInstance) {
@@ -754,8 +864,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         dashboardChartInstance = new Chart(dashCtx.getContext('2d'), chartConfig);
                     }
-                    // We could also update the main dashboard top cards if needed
-                    // But those are on the Dashboard view, we can just let them be or update them here
                     const statValues = document.querySelectorAll('.stat-value');
                     if(statValues.length >= 4) {
                         statValues[0].innerText = stats.insidePremises;
@@ -769,12 +877,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        // Load initially
         fetchActiveVisitors();
-        // Also fetch reports to populate dashboard top cards initially
         fetchReports();
         
-        // Setup polling every 30 seconds as fallback to WebSocket
         setInterval(() => {
             if(!document.getElementById('dashboard-view').classList.contains('d-none')) {
                 fetchActiveVisitors();

@@ -4,9 +4,11 @@ public interface SecurityService {
 
     boolean checkBlacklist(String mobileNumber, String idNumber);
 
-    boolean verifyOtp(String mobileNumber, String otpCode);
+    void sendEmailOtp(String email);
 
-    void sendOtp(String mobileNumber);
+    void sendMobileOtp(String mobile);
+    boolean verifyMobileOtp(String mobile, String otpCode);
+    boolean verifyEmailOtp(String email, String otpCode);
 
     String generateQrSignature(Long visitId, Long visitorId, String expectedDate);
 

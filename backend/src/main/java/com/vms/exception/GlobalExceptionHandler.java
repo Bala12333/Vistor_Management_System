@@ -42,6 +42,26 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
 
+    @ExceptionHandler(com.vms.exception.AccountLockedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountLockedException(com.vms.exception.AccountLockedException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", HttpStatus.FORBIDDEN.value());
+        response.put("error", ex.getMessage());
+
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(com.vms.exception.InvalidOtpException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidOtpException(com.vms.exception.InvalidOtpException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", HttpStatus.UNAUTHORIZED.value());
+        response.put("error", ex.getMessage());
+
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeExceptions(RuntimeException ex) {
         Map<String, Object> response = new HashMap<>();

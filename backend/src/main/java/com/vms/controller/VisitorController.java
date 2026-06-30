@@ -21,10 +21,20 @@ import org.springframework.web.bind.annotation.*;
 public class VisitorController {
 
     private final VisitorService visitorService;
+    private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
 
     @PostMapping("/register")
     @Operation(summary = "Register a new visitor and schedule a visit (Open Endpoint)")
     public ResponseEntity<VisitResponse> registerVisitor(@Valid @RequestBody VisitorRegistrationRequest request) {
+        // Enforce dual verification
+        boolean isMobileVerified = Boolean.TRUE.equals(redisTemplate.hasKey("otp_verified:" + request.getMobile()));
+        boolean isEmailVerified = Boolean.TRUE.equals(redisTemplate.hasKey("otp_verified:" + request.getEmail()));
+
+        if (!isMobileVerified || !isEmailVerified) {
+            throw new com.vms.exception.InvalidOtpException(
+                    "Unauthorized: Both Mobile and Email must be verified before registration.");
+        }
+
         // Map DTO to Entity
         Visitor visitor = new Visitor();
         visitor.setName(request.getName());
@@ -39,7 +49,8 @@ public class VisitorController {
         visitDetails.setExpectedDate(request.getExpectedDate());
         visitDetails.setPurpose(request.getPurpose());
 
-        Visit scheduledVisit = visitorService.scheduleVisit(savedVisitor.getId(), request.getEmployeeId(), request.getCategoryCode(), visitDetails);
+        Visit scheduledVisit = visitorService.scheduleVisit(savedVisitor.getId(), request.getEmployeeId(),
+                request.getCategoryCode(), visitDetails);
 
         return ResponseEntity.ok(mapToResponse(scheduledVisit));
     }
@@ -47,7 +58,7 @@ public class VisitorController {
     @GetMapping("/active")
     @Operation(summary = "Get a paginated list of active visits (Secured Endpoint)")
     public ResponseEntity<Page<VisitResponse>> getActiveVisits(@RequestParam(defaultValue = "0") int page,
-                                                               @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size) {
         Page<Visit> visits = visitorService.getActiveVisits(PageRequest.of(page, size));
         return ResponseEntity.ok(visits.map(this::mapToResponse));
     }
@@ -55,7 +66,7 @@ public class VisitorController {
     @GetMapping("/history")
     @Operation(summary = "Get a paginated list of all visits (History)")
     public ResponseEntity<Page<VisitResponse>> getVisitHistory(@RequestParam(defaultValue = "0") int page,
-                                                               @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size) {
         Page<Visit> visits = visitorService.getAllVisits(PageRequest.of(page, size));
         return ResponseEntity.ok(visits.map(this::mapToResponse));
     }
@@ -63,7 +74,7 @@ public class VisitorController {
     @GetMapping("/approvals/pending")
     @Operation(summary = "Get a paginated list of visits pending approval")
     public ResponseEntity<Page<VisitResponse>> getPendingApprovals(@RequestParam(defaultValue = "0") int page,
-                                                                   @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size) {
         Page<Visit> visits = visitorService.getPendingApprovals(PageRequest.of(page, size));
         return ResponseEntity.ok(visits.map(this::mapToResponse));
     }

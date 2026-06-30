@@ -31,7 +31,7 @@ public class DataSeeder implements CommandLineRunner {
     @Transactional
     public void run(String... args) throws Exception {
         log.info("--- Starting Database Seeding ---");
-        
+
         // 1. Users
         if (userRepository.findByEmail("admin@vms.com").isEmpty()) {
             User admin = new User();
@@ -69,17 +69,17 @@ public class DataSeeder implements CommandLineRunner {
             Department it = new Department();
             it.setDepartmentName("IT");
             departmentRepository.save(it);
-            
+
             Department hr = new Department();
             hr.setDepartmentName("Human Resources");
             departmentRepository.save(hr);
             log.info("Departments IT and HR created.");
         }
-        
+
         Department itDept = departmentRepository.findAll().stream()
-            .filter(d -> d.getDepartmentName().equals("IT"))
-            .findFirst()
-            .orElse(null);
+                .filter(d -> d.getDepartmentName().equals("IT"))
+                .findFirst()
+                .orElse(null);
 
         // 3. Employee mapping
         Employee hostEmployee = null;
@@ -110,29 +110,57 @@ public class DataSeeder implements CommandLineRunner {
             visitorCategoryRepository.save(vendor);
             log.info("Visitor categories CLIENT and VENDOR created.");
         }
-        
+
+        if (visitorCategoryRepository.findById("INTERVIEW").isEmpty()) {
+            VisitorCategory interview = new VisitorCategory();
+            interview.setCode("INTERVIEW");
+            interview.setDisplayName("Interview Candidate");
+            interview.setBadgeColour("purple");
+            visitorCategoryRepository.save(interview);
+            
+            VisitorCategory delivery = new VisitorCategory();
+            delivery.setCode("DELIVERY");
+            delivery.setDisplayName("Delivery Personnel");
+            delivery.setBadgeColour("yellow");
+            visitorCategoryRepository.save(delivery);
+            
+            VisitorCategory service = new VisitorCategory();
+            service.setCode("SERVICE");
+            service.setDisplayName("Service / Tech");
+            service.setBadgeColour("gray");
+            visitorCategoryRepository.save(service);
+            
+            VisitorCategory guest = new VisitorCategory();
+            guest.setCode("GUEST");
+            guest.setDisplayName("Personal Guest");
+            guest.setBadgeColour("green");
+            visitorCategoryRepository.save(guest);
+            
+            log.info("Missing visitor categories added.");
+        }
+
         VisitorCategory clientCategory = visitorCategoryRepository.findById("CLIENT").orElse(null);
 
         // 5. Visitors and Visits
         if (visitRepository.count() == 0 && hostEmployee != null && clientCategory != null) {
             log.info("Seeding 5 sample visitors and visits...");
-            String[] names = {"Alice Smith", "Bob Jones", "Charlie Brown", "Diana Prince", "Eve Adams"};
-            String[] phones = {"9876543210", "9876543211", "9876543212", "9876543213", "9876543214"};
+            String[] names = { "Alice Smith", "Bob Jones", "Charlie Brown", "Diana Prince", "Eve Adams" };
+            String[] phones = { "9876543210", "9876543211", "9876543212", "9876543213", "9876543214" };
             VisitStatus[] statuses = {
-                VisitStatus.CHECKED_IN, 
-                VisitStatus.PENDING, 
-                VisitStatus.CHECKED_IN, 
-                VisitStatus.COMPLETED, 
-                VisitStatus.CHECKED_IN
+                    VisitStatus.CHECKED_IN,
+                    VisitStatus.PENDING,
+                    VisitStatus.CHECKED_IN,
+                    VisitStatus.COMPLETED,
+                    VisitStatus.CHECKED_IN
             };
-            
-            for(int i=0; i<5; i++) {
+
+            for (int i = 0; i < 5; i++) {
                 Visitor v = new Visitor();
                 v.setName(names[i]);
                 v.setMobile(phones[i]);
                 v.setCompany("Test Corp " + i);
                 v = visitorRepository.save(v);
-                
+
                 Visit visit = new Visit();
                 visit.setVisitor(v);
                 visit.setEmployee(hostEmployee);
@@ -141,7 +169,7 @@ public class DataSeeder implements CommandLineRunner {
                 visit.setPurpose("Meeting " + i);
                 visit.setStatus(statuses[i]);
                 visitRepository.save(visit);
-                
+
                 if (statuses[i] == VisitStatus.CHECKED_IN || statuses[i] == VisitStatus.COMPLETED) {
                     CheckInOut cio = new CheckInOut();
                     cio.setVisit(visit);
@@ -154,7 +182,7 @@ public class DataSeeder implements CommandLineRunner {
             }
             log.info("5 sample visitors added successfully.");
         }
-        
+
         log.info("--- Database Seeding Complete ---");
     }
 }

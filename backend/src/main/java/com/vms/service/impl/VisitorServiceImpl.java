@@ -8,13 +8,17 @@ import com.vms.service.VisitorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.SimpleMailMessage;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VisitorServiceImpl implements VisitorService {
@@ -24,8 +28,9 @@ public class VisitorServiceImpl implements VisitorService {
     private final EmployeeRepository employeeRepository;
     private final VisitorCategoryRepository visitorCategoryRepository;
     private final CheckInOutRepository checkInOutRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+
     private final BlacklistService blacklistService;
+    private final JavaMailSender mailSender;
 
     @Override
     @Transactional
@@ -34,6 +39,12 @@ public class VisitorServiceImpl implements VisitorService {
             throw new RuntimeException("Visitor is blacklisted and cannot be registered.");
         }
         return visitorRepository.findByMobile(visitor.getMobile())
+                .map(existing -> {
+                    existing.setEmail(visitor.getEmail());
+                    existing.setName(visitor.getName());
+                    existing.setCompany(visitor.getCompany());
+                    return visitorRepository.save(existing);
+                })
                 .orElseGet(() -> visitorRepository.save(visitor));
     }
 
@@ -59,7 +70,26 @@ public class VisitorServiceImpl implements VisitorService {
         }
 
         Visit savedVisit = visitRepository.save(visitDetails);
-        messagingTemplate.convertAndSend("/topic/visits", "NEW_VISIT");
+        
+        // Send email with digital pass
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("no-reply@vms.com");
+            message.setTo(visitor.getEmail());
+            message.setSubject("Your VMS Digital Pass");
+            String qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=VMS-VISIT-" + savedVisit.getId();
+            message.setText("Dear " + visitor.getName() + ",\n\n" +
+                    "Your visit has been registered successfully.\n\n" +
+                    "Visit ID: VMS-" + String.format("%04d", savedVisit.getId()) + "\n" +
+                    "Host: " + employee.getUser().getName() + "\n\n" +
+                    "Please present this QR code at the reception: " + qrCodeUrl + "\n\n" +
+                    "Thank you,\nVMS Reception");
+            mailSender.send(message);
+            log.info("Digital Pass emailed to {}", visitor.getEmail());
+        } catch (Exception ex) {
+            log.error("Failed to send Digital Pass email", ex);
+        }
+
         return savedVisit;
     }
 
@@ -93,7 +123,7 @@ public class VisitorServiceImpl implements VisitorService {
         }
         visit.setStatus(VisitStatus.APPROVED);
         visitRepository.save(visit);
-        messagingTemplate.convertAndSend("/topic/visits", "STATUS_UPDATE");
+
     }
 
     @Override
@@ -106,7 +136,7 @@ public class VisitorServiceImpl implements VisitorService {
         }
         visit.setStatus(VisitStatus.REJECTED);
         visitRepository.save(visit);
-        messagingTemplate.convertAndSend("/topic/visits", "STATUS_UPDATE");
+
     }
 
     @Override
@@ -127,7 +157,7 @@ public class VisitorServiceImpl implements VisitorService {
         checkInOut.setCheckInTime(LocalDateTime.now());
         checkInOutRepository.save(checkInOut);
         
-        messagingTemplate.convertAndSend("/topic/visits", "CHECK_IN");
+
     }
 
     @Override
@@ -148,6 +178,6 @@ public class VisitorServiceImpl implements VisitorService {
         checkInOut.setCheckOutTime(LocalDateTime.now());
         checkInOutRepository.save(checkInOut);
         
-        messagingTemplate.convertAndSend("/topic/visits", "CHECK_OUT");
+
     }
 }

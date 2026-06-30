@@ -2,141 +2,161 @@ package com.vms.service.impl;
 
 import com.vms.repository.BlacklistRepository;
 import com.vms.service.SecurityService;
-import com.twilio.Twilio;
-import com.twilio.rest.verify.v2.service.Verification;
-import com.twilio.rest.verify.v2.service.VerificationCheck;
-import jakarta.annotation.PostConstruct;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.Base64;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class SecurityServiceImpl implements SecurityService {
 
+    private final JavaMailSender mailSender;
     private final BlacklistRepository blacklistRepository;
+    private final StringRedisTemplate redisTemplate;
 
-    @Value("${twilio.account-sid:dummy_sid}")
-    private String twilioAccountSid;
 
-    @Value("${twilio.auth-token:dummy_token}")
-    private String twilioAuthToken;
-
-    @Value("${twilio.verify-service-sid:dummy_service_sid}")
-    private String verifyServiceSid;
 
     @Value("${secret.qr-key:MySuperSecretKeyForQrCodeValidation123}")
     private String qrSecretKey;
 
-    // Mobile Number -> Fail Count
-    private final Map<String, Integer> otpFailures = new ConcurrentHashMap<>();
-    // Mobile Number -> Lock Expiration Time
-    private final Map<String, LocalDateTime> lockouts = new ConcurrentHashMap<>();
+    @Value("${spring.mail.password:mock_password}")
+    private String mailPassword;
 
-    @PostConstruct
-    public void initTwilio() {
-        if (!"dummy_sid".equals(twilioAccountSid)) {
-            Twilio.init(twilioAccountSid, twilioAuthToken);
-        }
-    }
+    private final SecureRandom secureRandom = new SecureRandom();
+
+
 
     @Override
     public boolean checkBlacklist(String mobileNumber, String idNumber) {
         if (mobileNumber != null && blacklistRepository.findByMobileNumberAndIsActiveTrue(mobileNumber).isPresent()) {
-            return true; // Hit
+            return true;
         }
         if (idNumber != null && blacklistRepository.findByIdNumberAndIsActiveTrue(idNumber).isPresent()) {
-            return true; // Hit
+            return true;
         }
         return false;
     }
 
+    private void checkSendLimit(String identifier) {
+        String countKey = "otp_send_count:" + identifier;
+        Long count = redisTemplate.opsForValue().increment(countKey);
+        if (count != null && count == 1) {
+            redisTemplate.expire(countKey, Duration.ofHours(1));
+        }
+        if (count != null && count > 3) {
+            throw new com.vms.exception.AccountLockedException("OTP send limit exceeded (max 3 per hour). Try again later.");
+        }
+    }
+
+    private boolean isLockedOut(String identifier) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey("otp_locked:" + identifier));
+    }
+
+    private void recordFailure(String identifier) {
+        String attemptsKey = "otp_attempts:" + identifier;
+        Long attempts = redisTemplate.opsForValue().increment(attemptsKey);
+        if (attempts != null && attempts == 1) {
+            redisTemplate.expire(attemptsKey, Duration.ofMinutes(15));
+        }
+        if (attempts != null && attempts >= 3) {
+            redisTemplate.opsForValue().set("otp_locked:" + identifier, "1", Duration.ofMinutes(15));
+            redisTemplate.delete(attemptsKey);
+            log.warn("Identifier {} locked out for 15 minutes", identifier);
+        }
+    }
+
+    // TODO: Re-enable Twilio SMS here before production. 
+    // Using mock OTP '123456' for now to save $$.
     @Override
-    public boolean verifyOtp(String mobileNumber, String otpCode) {
-        if (isLockedOut(mobileNumber)) {
-            throw new RuntimeException("Mobile number is locked out due to too many failed OTP attempts. Try again in 15 minutes.");
-        }
+    public void sendMobileOtp(String mobileNumber) {
+        log.info("Sending mock SMS to {} (OTP 123456)", mobileNumber);
+        redisTemplate.opsForValue().set("otp:" + mobileNumber, "123456", Duration.ofMinutes(15));
+    }
 
-        log.info("Verifying OTP {} for mobile {}", otpCode, mobileNumber);
+    @Override
+    public boolean verifyMobileOtp(String mobileNumber, String otpCode) {
+        log.info("Verifying OTP for {}", mobileNumber);
         
-        if ("dummy_sid".equals(twilioAccountSid)) {
-            // Mock environment, assume 123456 is the valid OTP
-            if ("123456".equals(otpCode)) {
-                otpFailures.remove(mobileNumber);
-                return true;
-            } else {
-                recordFailure(mobileNumber);
-                return false;
-            }
+        if (isLockedOut(mobileNumber)) {
+            throw new com.vms.exception.AccountLockedException("Mobile number is locked out due to too many failed OTP attempts. Try again in 15 minutes.");
         }
 
-        try {
-            VerificationCheck verificationCheck = VerificationCheck.creator(
-                    verifyServiceSid)
-                    .setTo(mobileNumber)
-                    .setCode(otpCode)
-                    .create();
-
-            if ("approved".equals(verificationCheck.getStatus())) {
-                otpFailures.remove(mobileNumber);
-                return true;
-            } else {
-                recordFailure(mobileNumber);
-                return false;
-            }
-        } catch (Exception e) {
-            log.error("Twilio Verification error", e);
+        String storedOtp = redisTemplate.opsForValue().get("otp:" + mobileNumber);
+        if (storedOtp != null && storedOtp.equals(otpCode)) {
+            redisTemplate.delete("otp_attempts:" + mobileNumber);
+            redisTemplate.delete("otp:" + mobileNumber);
+            redisTemplate.opsForValue().set("otp_verified:" + mobileNumber, "1", Duration.ofMinutes(30));
+            log.info("OTP verified for {}", mobileNumber);
+            return true;
+        } else {
             recordFailure(mobileNumber);
+            log.warn("Invalid OTP for {}", mobileNumber);
             return false;
         }
     }
 
-    private void recordFailure(String mobileNumber) {
-        int failures = otpFailures.getOrDefault(mobileNumber, 0) + 1;
-        if (failures >= 3) {
-            lockouts.put(mobileNumber, LocalDateTime.now().plusMinutes(15));
-            otpFailures.remove(mobileNumber);
-            log.warn("Mobile number {} locked out for 15 minutes", mobileNumber);
-        } else {
-            otpFailures.put(mobileNumber, failures);
+    @Override
+    public void sendEmailOtp(String email) {
+        if (isLockedOut(email)) {
+            throw new com.vms.exception.AccountLockedException("Email is locked out. Cannot send OTP.");
         }
-    }
+        checkSendLimit(email);
 
-    private boolean isLockedOut(String mobileNumber) {
-        LocalDateTime lockoutTime = lockouts.get(mobileNumber);
-        if (lockoutTime != null) {
-            if (LocalDateTime.now().isBefore(lockoutTime)) {
-                return true;
-            } else {
-                lockouts.remove(mobileNumber);
-            }
+        log.info("Sending Email OTP to {}", email);
+        String otpCode = String.format("%06d", secureRandom.nextInt(1000000));
+        
+        if ("mock_password".equals(mailPassword)) {
+            // Mock environment
+            redisTemplate.opsForValue().set("otp:" + email, "123456", Duration.ofMinutes(15));
+            return;
         }
-        return false;
+
+        redisTemplate.opsForValue().set("otp:" + email, otpCode, Duration.ofMinutes(15));
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("no-reply@vms.com");
+            message.setTo(email);
+            message.setSubject("Your VMS Verification Code");
+            message.setText("Your verification code is: " + otpCode + "\n\nThis code will expire in 15 minutes.");
+            mailSender.send(message);
+            log.info("Email sent to {}", email);
+        } catch (Exception ex) {
+            log.error("Error sending email via JavaMailSender", ex);
+            throw new RuntimeException("Failed to send OTP email.");
+        }
     }
 
     @Override
-    public void sendOtp(String mobileNumber) {
-        if (isLockedOut(mobileNumber)) {
-            throw new RuntimeException("Mobile number is locked out. Cannot send OTP.");
+    public boolean verifyEmailOtp(String email, String otpCode) {
+        if (isLockedOut(email)) {
+            throw new com.vms.exception.AccountLockedException("Email is locked out due to too many failed OTP attempts. Try again in 15 minutes.");
         }
 
-        log.info("Sending OTP to {}", mobileNumber);
-        if (!"dummy_sid".equals(twilioAccountSid)) {
-            Verification.creator(
-                    verifyServiceSid,
-                    mobileNumber,
-                    "sms")
-                    .create();
+        log.info("Verifying Email OTP {} for email {}", otpCode, email);
+
+        String storedOtp = redisTemplate.opsForValue().get("otp:" + email);
+        if (storedOtp != null && storedOtp.equals(otpCode)) {
+            redisTemplate.delete("otp:" + email);
+            redisTemplate.delete("otp_attempts:" + email);
+            redisTemplate.opsForValue().set("otp_verified:" + email, "1", Duration.ofMinutes(30));
+            return true;
+        } else {
+            recordFailure(email);
+            return false;
         }
     }
 

@@ -1,9 +1,11 @@
 spring:
   application:
     name: vms-backend
+  config:
+    import: optional:file:.env[.properties]
   
   datasource:
-    url: jdbc:mysql://localhost:3307/vms_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/vms_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:2005}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -19,26 +21,25 @@ spring:
 
   data:
     redis:
-      host: localhost
-      port: 6379
-      password: ${REDIS_PASSWORD:}
-      timeout: 200ms
+      url: ${REDIS_URL:redis://localhost:6379}
+      timeout: 5000ms
 
   servlet:
     multipart:
       max-file-size: 5MB
       max-request-size: 10MB
 
-twilio:
-  account-sid: ${TWILIO_ACCOUNT_SID:mock_sid}
-  auth-token: ${TWILIO_AUTH_TOKEN:mock_token}
-  verify:
-    service-sid: ${TWILIO_VERIFY_SID:mock_verify_sid}
-  whatsapp:
-    from: ${TWILIO_WHATSAPP_FROM:whatsapp:+14155238886}
-
-sendgrid:
-  api-key: ${SENDGRID_API_KEY:mock_sendgrid_key}
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:your-email@gmail.com}
+    password: ${MAIL_PASSWORD:mock_password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 app:
   qr-secret-key: ${QR_SECRET_KEY:ThisIsASecretKeyForQRGeneration123}

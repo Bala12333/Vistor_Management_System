@@ -211,3 +211,18 @@ SENDGRID_API_KEY=SG.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
    ```bash
    mvn spring-boot:run
    ```
+
+---
+
+## 🚀 Future Enhancements / Production Rollout
+
+### 📱 SMS OTP Integration (Twilio)
+During the internship and development phases, real SMS sending via **Twilio** is temporarily disabled to avoid accumulating billing costs on trial accounts. 
+
+Currently, the system uses a **Mock OTP (`123456`)** backed by Redis for all mobile number verification flows. 
+
+**Production Rollout Plan:**
+1. **Enable Twilio Verify API:** Once the project is moved to full production, the `SecurityServiceImpl.java` will be updated to utilize the Twilio Verify REST API.
+2. **Remove Mock Logic:** The static `123456` Redis assignment in `sendMobileOtp` will be replaced with the Twilio Verify SDK trigger.
+3. **Environment Variables:** Production `.env` files will require active `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_VERIFY_SID` keys (already stubbed in configuration).
+4. **WhatsApp Fallback:** After SMS OTP stabilizes, we will introduce WhatsApp-based OTP delivery using the Twilio WhatsApp Sandbox infrastructure.

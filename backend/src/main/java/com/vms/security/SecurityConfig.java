@@ -41,8 +41,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/visitors/register").permitAll()
                         .requestMatchers("/api/v1/security/otp/**").permitAll()
+                        .requestMatchers("/api/v1/draft/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // Developer Advocate req
-                        .requestMatchers("/ws-admin/**").permitAll() // WebSockets
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

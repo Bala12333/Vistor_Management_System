@@ -47,12 +47,6 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
-        <!-- WebSocket for Real-Time Dashboard -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-websocket</artifactId>
-        </dependency>
-
         <!-- MySQL Connector -->
         <dependency>
             <groupId>com.mysql</groupId>
@@ -86,12 +80,6 @@
             <scope>runtime</scope>
         </dependency>
 
-		<!-- Twilio for OTP & WhatsApp -->
-		<dependency>
-			<groupId>com.twilio.sdk</groupId>
-			<artifactId>twilio</artifactId>
-			<version>9.14.0</version>
-		</dependency>
 
 		<!-- Swagger / OpenAPI for documentation -->
 		<dependency>
@@ -107,11 +95,10 @@
 			<version>8.9.0</version>
 		</dependency>
 
-        <!-- SendGrid -->
+        <!-- Spring Boot Mail -->
         <dependency>
-            <groupId>com.sendgrid</groupId>
-            <artifactId>sendgrid-java</artifactId>
-            <version>4.10.1</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
         <!-- QR Code Generator (Zxing) -->

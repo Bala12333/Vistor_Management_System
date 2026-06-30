@@ -31,3 +31,12 @@ backend/target/
 .vscode/
 node_modules/
 .DS_Store
+
+# Secrets and Configs
+*firebase-adminsdk*.json
+service-account.json
+backend/src/main/resources/*.json
+.env
+backend/.env
+.firebase/
+.firebaserc

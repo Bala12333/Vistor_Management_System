@@ -17,17 +17,32 @@ public class SecurityController {
 
     private final SecurityService securityService;
 
-    @PostMapping("/otp/send")
-    @Operation(summary = "Send an OTP via Twilio to the provided mobile number (Open Endpoint)")
-    public ResponseEntity<Void> sendOtp(@RequestParam String mobile) {
-        securityService.sendOtp(mobile);
+    @PostMapping("/otp/send-mobile")
+    @Operation(summary = "Send a mock OTP via SMS to the provided mobile number (Open Endpoint)")
+    public ResponseEntity<Void> sendMobileOtp(@RequestParam String mobile) {
+        securityService.sendMobileOtp(mobile);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/otp/verify")
-    @Operation(summary = "Verify the OTP for a mobile number (Open Endpoint)")
-    public ResponseEntity<Boolean> verifyOtp(@Valid @RequestBody OtpVerificationRequest request) {
-        boolean isValid = securityService.verifyOtp(request.getMobile(), request.getOtpCode());
+    @PostMapping("/otp/verify-mobile")
+    @Operation(summary = "Verify the mock OTP for a mobile number (Open Endpoint)")
+    public ResponseEntity<Boolean> verifyMobileOtp(@Valid @RequestBody OtpVerificationRequest request) {
+        boolean isValid = securityService.verifyMobileOtp(request.getMobile(), request.getOtpCode());
+        return ResponseEntity.ok(isValid);
+    }
+
+    @PostMapping("/otp/send-email")
+    @Operation(summary = "Send an OTP via Email to the provided email address (Open Endpoint)")
+    public ResponseEntity<Void> sendEmailOtp(@RequestParam String email) {
+        securityService.sendEmailOtp(email);
+        return ResponseEntity.ok().build();
+    }
+
+
+    @PostMapping("/otp/verify-email")
+    @Operation(summary = "Verify the OTP for an email address (Open Endpoint)")
+    public ResponseEntity<Boolean> verifyEmailOtp(@Valid @RequestBody com.vms.dto.EmailOtpVerificationRequest request) {
+        boolean isValid = securityService.verifyEmailOtp(request.getEmail(), request.getOtpCode());
         return ResponseEntity.ok(isValid);
     }
 }

@@ -3,6 +3,7 @@ package com.vms.service.impl;
 import com.vms.entity.User;
 import com.vms.repository.UserRepository;
 import com.vms.service.AuthService;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -13,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.vms.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 
+import java.time.Duration;
+import java.util.Date;
+
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -20,6 +24,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final StringRedisTemplate redisTemplate;
 
     @Override
     @Transactional
@@ -44,6 +49,17 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void logout(String token) {
-        // Invalidate token or add to Redis blacklist
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        try {
+            Date expiration = jwtUtil.extractExpiration(token);
+            long ttlMillis = expiration.getTime() - System.currentTimeMillis();
+            if (ttlMillis > 0) {
+                redisTemplate.opsForValue().set("jwt_blacklist:" + token, "1", Duration.ofMillis(ttlMillis));
+            }
+        } catch (Exception e) {
+            // Token is likely invalid or expired already
+        }
     }
 }
