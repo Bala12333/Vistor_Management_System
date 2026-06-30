@@ -9,8 +9,8 @@ permissions:
   pull-requests: write
 jobs:
   build_and_preview:
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: ubuntu-latest
+    if: '${{ github.event.pull_request.head.repo.full_name == github.repository }}'
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - run: echo "No build needed"
@@ -19,4 +19,3 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MY_VSM_DD5C1 }}
           projectId: my-vsm-dd5c1
-          firebaseToolsVersion: 13.0.0
