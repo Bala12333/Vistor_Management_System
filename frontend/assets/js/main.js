@@ -115,10 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
     handleFilePreview('photoUpload', 'photoPreview');
     handleFilePreview('idUpload', 'idPreview');
 
-    // --- API Configuration ---
     const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
         ? 'http://localhost:8080/api/v1' 
-        : 'https://YOUR_RENDER_APP_NAME.onrender.com/api/v1'; // <-- IMPORTANT: Replace with your actual Render URL before deploying frontend!
+        : 'https://vistor-management-system.onrender.com/api/v1';
 
     const getToken = () => localStorage.getItem('vms_jwt');
 
